@@ -171,3 +171,38 @@ header h1 {
     width: 100%;
   }
 }
+
+.confirm-popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  min-width: 200px;
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.btn.danger {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+.btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}

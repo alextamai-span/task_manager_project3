@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import './App.css';
 
 function App() {
@@ -17,6 +19,11 @@ function App() {
   const [taskValidation, setTaskValidation] = useState('');
   const [categoryValidation, setCategoryValidation] = useState('');
   const [deadlineValidation, setDeadlineValidation] = useState('');
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [taskToClear, setTaskToClear] = useState(null);
+  const [showConfirmDeletePopup, setShowConfirmDeletePopup] = useState(false);
+  const [showConfirmClearPopup, setShowConfirmClearPopup] = useState(false);
+
 
   // storing a task in SQLite database
   const [tasks, setTasks] = useState(() => {
@@ -51,10 +58,16 @@ const validateForm = () => {
   let hasError = false;
 
   // Name validation
+  const nameRegex = /^[A-Za-z\s]{2,50}$/;
   if (!nameInput.trim()) {
     setNameValidation('Name is required.');
     hasError = true;
-  } else {
+  }
+  else if (!nameRegex.test(nameInput)) {
+    setNameValidation('Name must be 2-50 characters long and contain only letters and spaces.');
+    hasError = true;
+  }
+  else {
     setNameValidation('');
   }
 
@@ -63,10 +76,12 @@ const validateForm = () => {
   if (!emailInput.trim()) {
     setEmailValidation('Email is required.');
     hasError = true;
-  } else if (!emailRegex.test(emailInput)) {
+  }
+  else if (!emailRegex.test(emailInput)) {
     setEmailValidation('Email is not valid.');
     hasError = true;
-  } else {
+  }
+  else {
     setEmailValidation('');
   }
 
@@ -75,18 +90,26 @@ const validateForm = () => {
   if (!phoneInput.trim()) {
     setPhoneValidation('Phone is required.');
     hasError = true;
-  } else if (!phoneRegex.test(phoneInput)) {
+  }
+  else if (!phoneRegex.test(phoneInput)) {
     setPhoneValidation('Phone number is not valid');
     hasError = true;
-  } else {
+  }
+  else {
     setPhoneValidation('');
   }
 
   // Task validation
+  const taskRegex = /^[A-Za-z0-9\s.,'-]{3,100}$/;
   if (!taskInput.trim()) {
     setTaskValidation('Task is required.');
     hasError = true;
-  } else {
+  } 
+  else if (!taskRegex.test(taskInput)) {
+    setTaskValidation('Task must be 3-100 characters long and can include letters, numbers, spaces, and basic punctuation.');
+    hasError = true;
+  }
+  else {
     setTaskValidation('');
   }
 
@@ -150,10 +173,14 @@ const handleSubmit = async (e: any) => {
 
         // Update tasks state
         setTasks(tasks.map((t:any) => t.id === editId ? newTask : t));
+        useEffect;
         // Clear editId
         setEditId(null);
+
+        toast.success("Task edited successfully");
       }
       catch (err) {
+        toast.error("Failed to edit task");
         console.error('Failed to edit task:', err);
       }
     } 
@@ -184,40 +211,59 @@ const handleSubmit = async (e: any) => {
 
         // Get saved task from response
         const savedTask = await res.json();
+        useEffect;
         // Update tasks state
         setTasks([...tasks, savedTask]);
+
+        toast.success("Task added successfully");
       }
       catch (err) {
+        toast.error("Failed to add task");
         console.error('Failed to add task:', err);
       }
     } // end else
-    
+
     // clear inputs
     clearInputs();
   };
 
   // delete a task
-  const deleteTask = async (task:any) => {
-    try {
-      // confirm delete
-      if (window.confirm("Are you sure you want to delete this task?")) {
-        // delete task from backend
-        const res = await fetch(`http://localhost:5000/deletetask?id=${task.id}`, {
-          method: 'DELETE'
-        });
+  const deleteTask = async () => {
+    if (!taskToDelete) {
+      return;
+    }
 
-        if (!res.ok) {
-          throw new Error('Failed to update task');
-        }
-        
-        // delete task from state
-        setTasks(tasks.filter((t: any) => t.id !== task.id));
-      }
+    try {
+      // Delete task from backend
+      const res = await fetch(`http://localhost:5000/deletetask?id=${taskToDelete.id}`, { 
+        method: "DELETE" 
+      });
+
+      if (!res.ok) {
+        throw new Error();
+      } 
+
+      // Delete task from state
+      setTasks(tasks.filter((t: any) => t.id !== taskToDelete.id));
+      toast.success("Task deleted successfully");
     }
     catch (err) {
-      console.error('Failed to delete task:', err);
+      toast.error("Failed to delete task");
+      console.error("Failed to delete task:", err);
+    }
+    finally {
+      setTaskToDelete(null); // hide popup
+      setShowConfirmDeletePopup(false);
     }
   };
+
+  // User clicks "No"
+  const cancelDelete = () => {
+    toast.info("Delete cancelled");
+    setTaskToDelete(null); // hide popup
+    setShowConfirmDeletePopup(false);
+  };
+
 
   // toggle task completion
   const toggleComplete = async (task:any) => {
@@ -263,27 +309,35 @@ const handleSubmit = async (e: any) => {
   // clear all tasks
   const clearAll = async () => {
     try {
-      // confirm clear all
-      if (window.confirm("Are you sure you want to clear all tasks?")) {
-        // clear tasks from state
-        setTasks([]);
+      const res = await fetch('http://localhost:5000/cleartasks', {
+        method: 'DELETE'
+      });
 
-        // clear tasks from backend
-        const res = await fetch('http://localhost:5000/cleartasks', {
-          method: 'DELETE'
-        });
-
-        if (!res.ok) {
-          throw new Error('Failed to clear tasks');
-        }
-
-        // clear inputs
-        clearInputs();
+      if (!res.ok) {
+        throw new Error('Failed to clear tasks');
       }
+      
+      // clear tasks
+      setTasks([]);
+      // clear inputs
+      clearInputs();
+      toast.success("All tasks cleared successfully");
     }
     catch (err) {
+      toast.error("Failed to clear task");
       console.error('Failed to clear tasks:', err);
     }
+    finally {
+      setTaskToClear(null); // hide popup
+      setShowConfirmClearPopup(false);
+    }
+  };
+
+  // User clicks "No"
+  const cancelClear = () => {
+    toast.info("Clear cancelled");
+    setTaskToClear(null); // hide popup
+    setShowConfirmClearPopup(false);
   };
 
   // clear input fields
@@ -300,6 +354,35 @@ const handleSubmit = async (e: any) => {
   return (
     <>
       <div>
+        <ToastContainer
+          position="top-center"
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          pauseOnHover
+          draggable
+        />
+
+        {showConfirmDeletePopup && (
+          <div className="confirm-popup">
+            <p>Delete this task?</p>
+            <div className="popup-actions">
+              <button onClick={deleteTask} className="btn danger">Yes</button>
+              <button onClick={cancelDelete} className="btn">No</button>
+            </div>
+          </div>
+        )}
+
+        {showConfirmClearPopup && (
+          <div className="confirm-popup">
+            <p>Clear all tasks?</p>
+            <div className="popup-actions">
+              <button onClick={clearAll} className="btn danger">Yes</button>
+              <button onClick={cancelClear} className="btn">No</button>
+            </div>
+          </div>
+        )}
+
         <header>
           <h1>Task Manager</h1>
         </header>
@@ -311,7 +394,15 @@ const handleSubmit = async (e: any) => {
               value={nameInput}
               name="name"
               placeholder="Enter name"
-              onChange={(e) => setNameInput(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setNameInput(value);
+
+                if (value.trim()) {
+                  setNameValidation('');
+                }
+              }}
+
             />
             { nameValidation && <h4 className="form-invalid">{nameValidation}</h4> }
 
@@ -321,7 +412,14 @@ const handleSubmit = async (e: any) => {
               value={emailInput}
               name="email"
               placeholder="Enter email"
-              onChange={(e) => setEmailInput(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setEmailInput(value);
+
+                if (value.trim()) {
+                  setEmailValidation('');
+                }
+              }}
             />
             { emailValidation && <h4 className="form-invalid">{emailValidation}</h4> }
 
@@ -331,7 +429,14 @@ const handleSubmit = async (e: any) => {
               value={phoneInput}
               name="phone"
               placeholder="Enter phone"
-              onChange={(e) => setPhoneInput(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setPhoneInput(value);
+
+                if (value.trim()) {
+                  setPhoneValidation('');
+                }
+              }}
             />
             { phoneValidation && <h4 className="form-invalid">{phoneValidation}</h4> }
 
@@ -341,7 +446,14 @@ const handleSubmit = async (e: any) => {
               value={taskInput}
               name="task"
               placeholder="Enter task"
-              onChange={(e) => setTaskInput(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setTaskInput(value);
+
+                if (value.trim()) {
+                  setTaskValidation('');
+                }
+              }}
             />
             { taskValidation && <h4 className="form-invalid">{taskValidation}</h4> }
 
@@ -359,7 +471,14 @@ const handleSubmit = async (e: any) => {
               name="categories"
               className={`form-category ${categoryValidation ? "input-error" : ""}`}
               value={category}
-              onChange={(e) => setCategory(e.target.value)}>
+              onChange={(e) => {
+                const value = e.target.value;
+                setCategory(value);
+
+                if (value.trim()) {
+                  setCategoryValidation('');
+                }
+              }}>
               <option value="Select">Select</option>
               <option value="Work">Work</option>
               <option value="Family">Family</option>
@@ -373,7 +492,14 @@ const handleSubmit = async (e: any) => {
               type="date"
               className={`form-deadline ${deadlineValidation ? "input-error" : ""}`}
               value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDeadline(value);
+
+                if (value.trim()) {
+                  setDeadlineValidation('');
+                }
+              }}
             />
             { deadlineValidation && <h4 className="form-invalid">{deadlineValidation}</h4> }
         
@@ -403,7 +529,10 @@ const handleSubmit = async (e: any) => {
                 <i className="fa-solid fa-pen"></i>
                 <img src="edit.png" alt="Edit" className="action-icon" />
               </button>
-              <button onClick={() => deleteTask(task)} className="delete-btn">
+              <button onClick={() => {
+                  setTaskToDelete(task);
+                  setShowConfirmDeletePopup(true);
+                }} className="delete-btn">
                 <i className="fa-solid fa-trash"></i>
                 <img src="trash.png" alt="Delete" className="action-icon" />
               </button>
@@ -412,7 +541,8 @@ const handleSubmit = async (e: any) => {
           ))}
         </ul>
 
-        <button onClick={clearAll} className="btn clear-btn">Clear All</button>
+        <button onClick={() => { setShowConfirmClearPopup(true); }}
+          className="btn clear-btn">Clear All</button>
       </div>
     </>
   )
