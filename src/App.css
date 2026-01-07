@@ -81,6 +81,20 @@ header h1 {
   outline: none;
 }
 
+.form-invalid{
+  color: #e74c3c;
+  font-size: 14px;
+  margin-top: 5px;
+  display: block;
+}
+
+.input-error {
+  border: 2px solid #e74c3c;
+  background-color: #fdecea;
+  box-shadow: 0 0 6px rgba(231, 76, 60, 0.6);
+}
+
+
 /* Buttons */
 .btn {
   background-color: #333;
