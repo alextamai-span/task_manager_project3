@@ -19,6 +19,7 @@ function App() {
   const [taskValidation, setTaskValidation] = useState('');
   const [categoryValidation, setCategoryValidation] = useState('');
   const [deadlineValidation, setDeadlineValidation] = useState('');
+
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [taskToClear, setTaskToClear] = useState(null);
   const [showConfirmDeletePopup, setShowConfirmDeletePopup] = useState(false);
@@ -234,14 +235,25 @@ const handleSubmit = async (e: any) => {
     }
 
     try {
-      // Delete task from backend
-      const res = await fetch(`http://localhost:5000/deletetask?id=${taskToDelete.id}`, { 
-        method: "DELETE" 
+      // change the isDeleted flag in backend
+      const resIsDeleted = await fetch(`http://localhost:5000/isdeletedtask`, { 
+        method: "PUT",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: taskToDelete.id, isDeleted: 1 })
       });
 
-      if (!res.ok) {
-        throw new Error();
-      } 
+      if (!resIsDeleted.ok) {
+        throw new Error('Failed to delete task');
+      }
+
+      // Delete task from backend
+      const resDelete = await fetch(`http://localhost:5000/deletetask?id=${taskToDelete.id}`, { 
+        method: "DELETE",
+      });
+
+      if (!resDelete.ok) {
+        throw new Error('Failed to delete task');
+      }
 
       // Delete task from state
       setTasks(tasks.filter((t: any) => t.id !== taskToDelete.id));

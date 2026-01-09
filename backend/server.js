@@ -27,7 +27,8 @@ let sql = `
   description TEXT,
   category TEXT,
   deadline DATE,
-  isCompleted INTEGER DEFAULT 0
+  isCompleted INTEGER DEFAULT 0,
+  isDeleted INTEGER DEFAULT 0
 )`;
 
 // table created
@@ -54,7 +55,7 @@ app.get('/listtotask', (request, resolve) => {
   // get all tasks 
   resolve.set('content-type', 'application/json');
 
-  const sql = 'SELECT * FROM test_table';
+  const sql = 'SELECT * FROM test_table WHERE isDeleted = 0';
   let data = { tasks: [] };
 
   try {
@@ -75,7 +76,8 @@ app.get('/listtotask', (request, resolve) => {
           description: row.description,
           category: row.category,
           deadline: row.deadline,
-          isCompleted: row.isCompleted
+          isCompleted: row.isCompleted,
+          isDeleted: row.isDeleted
         });
       });
       let content = JSON.stringify(data);
@@ -128,7 +130,8 @@ app.post('/addtask', (request, resolve) => {
           description: req.description, 
           category: req.category, 
           deadline: req.deadline,
-          isCompleted: false
+          isCompleted: false,
+          isDeleted: false
         };
         const content = JSON.stringify(data);
         resolve.send(content);
@@ -275,6 +278,51 @@ app.delete('/deletetask', (request, resolve) => {
     console.log('error deleting:', err.message);
     resolve.status(469);
     resolve.send(`{"code":469, "status":"${err.message}"}`);
+  }
+});
+
+// task is deleted from the table
+app.put('/isdeletedtask', (request, resolve) => {
+  let req = request.body;
+
+  console.log('isdeletedtask req:', req);
+  
+  // deleted task
+  resolve.set('content-type', 'application/json');
+
+  const sql = `UPDATE test_table 
+               SET isDeleted = ? 
+               WHERE id = ?`;
+
+  try {
+    req.isDeleted = 1;
+
+    // // run the update command
+    db.run(sql, 
+      [ req.isDeleted, req.id ],
+      // function to handle update result
+      function(err) {
+        if (err) {
+          throw err;
+        }
+        
+        resolve.status(200);
+    //     // send back the updated task
+    //     const data = { 
+    //       id: req.id,
+    //       isDeleted: req.isDeleted ? 1 : 0
+    //     };
+        const content = JSON.stringify(req.isDeleted);
+        resolve.send(content);
+        console.log('task deleted update successfully');
+      }
+    );
+  } 
+  catch (err) {
+    // error updating task
+    console.log('error updating:', err.message);
+    resolve.status(470);
+    resolve.send(`{"code":470, "status":"${err.message}"}`);
   }
 });
 
